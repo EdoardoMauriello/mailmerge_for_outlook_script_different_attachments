@@ -1,0 +1,77 @@
+# Load the required Outlook COM objects
+Add-Type -AssemblyName Microsoft.Office.Interop.Outlook
+
+# Define the path to your Excel file with recipient data
+$excelFilePath = "C:\Path\To\RecipientList.xlsx"
+
+# Create an Outlook application object
+$outlook = New-Object -ComObject Outlook.Application
+
+# Open the Excel file and select the worksheet
+$excel = New-Object -ComObject Excel.Application
+$workbook = $excel.Workbooks.Open($excelFilePath)
+$worksheet = $workbook.Worksheets.Item(1)
+
+# Get the last row with data in the Excel sheet
+$maxRow = $worksheet.UsedRange.Rows.Count
+
+# Counter to keep track of emails sent
+$emailCounter = 0
+
+# Loop through each row in the Excel sheet
+for ($row = 2; $row -le $maxRow; $row++) {
+    # Get recipient data from the Excel sheet
+    $recipientName = $worksheet.Cells.Item($row, 1).Text
+    $recipientEmail = $worksheet.Cells.Item($row, 2).Text
+
+    # Create a new Outlook email item
+    $mail = $outlook.CreateItem(0)
+
+    # Set the recipient email address
+    $mail.Recipients.Add($recipientEmail)
+
+    # Set the subject of the email
+    $mail.Subject = "Personalized Email with Attachment"
+
+    # Compose the email body with personalized salutation
+    $mail.Body = "Dear $recipientName," + [System.Environment]::NewLine +
+                 "This is the body of your personalized email." + [System.Environment]::NewLine +
+                 "Sincerely, Your Name"
+
+    # Add an attachment (update the path to your attachment file)
+    $attachmentPath = "C:\Path\To\YourAttachment.pdf"
+    $mail.Attachments.Add($attachmentPath)
+
+    # Send the email
+    $mail.Send()
+
+    # Dispose of the email object
+    [System.Runtime.Interopservices.Marshal]::ReleaseComObject($mail)
+
+    # Increment the email counter
+    $emailCounter++
+
+    # Check if 10 emails have been sent, then pause for 1 minute
+    if ($emailCounter -eq 10) {
+        Write-Host "Sent 10 emails. Pausing for 1 minute..."
+        Start-Sleep -Seconds 60  # Pause for 1 minute
+        $emailCounter = 0  # Reset the counter
+    }
+}
+
+# Close and quit Excel
+$workbook.Close($false)
+$excel.Quit()
+[System.Runtime.Interopservices.Marshal]::ReleaseComObject($worksheet)
+[System.Runtime.Interopservices.Marshal]::ReleaseComObject($workbook)
+[System.Runtime.Interopservices.Marshal]::ReleaseComObject($excel)
+
+# Release Outlook COM objects
+[System.Runtime.Interopservices.Marshal]::ReleaseComObject($outlook)
+
+# Clean up any remaining resources
+[System.GC]::Collect()
+[System.GC]::WaitForPendingFinalizers()
+
+# Display a message when done
+Write-Host "Emails sent to all recipients."
